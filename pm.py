@@ -12,10 +12,13 @@ from email.mime.text import MIMEText
 
 class Job:
   def __init__(self, conf):
+    self.conf = conf
+
+    self.name = conf['name']
     self.url = conf['url']
     self.status = conf['status']
     self.interval = conf['interval']
-    self.failed_times = conf['failed_times']
+    self.failed_times = 0; #conf['failed_times']
     self.alert_interval = conf['alert_interval']
     self.relist = []
     for re_str in conf['re']:
@@ -31,12 +34,12 @@ class Job:
   def check(self):
     status = 1
     time_now = time.time()
-    fn = "/tmp/pagemonitor.%d"%(time_now)
+    fn = "/tmp/pagemonitor.%s.%d"%(self.name, time_now)
     try:
       if self.times_check==0 or time_now-self.time_last > self.interval:
         self.times_check = self.times_check + 1
         #crawl
-        os.system("wget -O %s %s"%(fn, self.url))
+        os.system("curl -L -o %s %s"%(fn, self.url))
         file_object = open(fn, 'r')
         page_str = file_object.read( )
         file_object.close( )
@@ -60,6 +63,7 @@ class Job:
       print >>sys.stderr, e 
     #alert
     if status:
+      self.failed_times = 0
       if os.path.exists(fn):
         os.system("rm %s"%(fn))
     else:
@@ -67,15 +71,18 @@ class Job:
         self.failed_times = 1
       else:
         self.failed_times = self.failed_times + 1
-      #send email
-      for email in self.email:
-        try:
-          title = "test"
-          content = "test content"
-          sendmail("service@cherongzi.com", email, title, content);
-        except Exception as e:
-          print >>sys.stderr, e 
-      self.time_alert_last = time.time()
+      if self.failed_times >= self.conf['failed_times']:
+        #send email
+        for email in self.email:
+          try:
+            title = "%s failed "%(self.name)
+            fp = open(fn, 'r')
+            content = "%s failed %d times<br>\nfn=%s<br>\nresponse:%s"%(self.name, self.failed_times, fn, fp.read() )
+            fp.close();
+            sendmail("hupaialert@163.com", email, title, content);
+          except Exception as e:
+            print >>sys.stderr, e 
+          self.time_alert_last = time.time()
    
 
 def sendmail(me, you, head, content):
@@ -84,9 +91,9 @@ def sendmail(me, you, head, content):
     msg['Subject'] = head
     msg['From'] = me   
     msg['To'] = you  
-    
-    s = smtplib.SMTP('127.0.0.1')  
-    #s.login()  
+   
+    s = smtplib.SMTP('smtp.163.com');
+    s.login(me, "123qp789") 
     s.sendmail(me, [you], msg.as_string())  
     s.quit() 
  
