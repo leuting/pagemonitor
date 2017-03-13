@@ -39,7 +39,9 @@ class Job:
       if self.times_check==0 or time_now-self.time_last > self.interval:
         self.times_check = self.times_check + 1
         #crawl
-        os.system("curl -L -o %s %s"%(fn, self.url))
+        curlcmd = "curl -L -o %s %s"%(fn, self.url)
+        print curlcmd
+        os.system(curlcmd)
         file_object = open(fn, 'r')
         page_str = file_object.read( )
         file_object.close( )
@@ -93,7 +95,7 @@ def sendmail(me, you, head, content):
     msg['To'] = you  
    
     s = smtplib.SMTP('smtp.163.com');
-    s.login(me, "123qp789") 
+    s.login(me, "123456") 
     s.sendmail(me, [you], msg.as_string())  
     s.quit() 
  
@@ -121,7 +123,7 @@ if __name__=="__main__":#
   parser = OptionParser()
   parser.add_option("-c", "--conf", action="store",
                     dest="cf",
-                    default="conf.js",
+                    default="conf.json",
                     help="json format configure file path")
   (options, args) = parser.parse_args()
   run(options)
