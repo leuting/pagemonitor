@@ -1,3 +1,4 @@
 conf.json
 pm.pid
 *.log
+pids.txt
